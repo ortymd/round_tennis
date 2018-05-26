@@ -13,6 +13,7 @@ def read_keyboard():
 		print("start")
 		event = pygame.event.wait()			# here we wait until user hits keyboard
 		print("end")
+		time.sleep(2)
 		player_input = ''
 		font = pygame.font.Font(None, 50)
 		if event.type == KEYDOWN:
@@ -21,12 +22,7 @@ def read_keyboard():
 		elif event.type == QUIT:
 			return
 
-		screen.fill ((0, 0, 0))
-		block = font.render(player_input, True, (255, 255, 255))
-		rect = block.get_rect()
-		rect.center = screen.get_rect().center
-		screen.blit(block, rect)
-		pygame.display.flip()
+		#pygame.display.flip()
 
 def count_threads():
 	while True:
@@ -44,5 +40,5 @@ count_threads_thread = threading.Thread(target = count_threads)			# this is used
 pygame.init()
 screen = pygame.display.set_mode((480, 360))
 #read_keyboard()
-count_threads_thread.start()
+#count_threads_thread.start()
 read_keyboard_thread.start()
