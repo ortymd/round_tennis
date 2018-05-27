@@ -8,24 +8,22 @@ import player
 # we use this handle to call functions from lib_test.so
 lib_handle=ctypes.cdll.LoadLibrary(
         "/home/dim/Documents/projects/plvision/round_tennis/lib_c/tests/lib_test.so")
-
 def read_keyboard():
     running = True
     player_input = ''
     font = pygame.font.Font(None, 50)
 
+    pygame.event.clear()
     while running:
         event = pygame.event.wait()    # here we wait until user hits keyboard
-        event_list = pygame.event.get(KEYDOWN)
-        for event in event_list:
-            if event.type == KEYDOWN:
-                print('keydown')
-                if event.unicode == 'h':
-                    player_input = 'hello'
-                elif event.type == QUIT:
-                    return
+        if event.type == KEYDOWN:
+            print('keydown')
+            if event.unicode == 'h':
+                player_input = 'hello'
+        elif event.type == QUIT:
+            break
 
-        screen.fill ((0, 0, 0))
+        screen.fill ((0, 0, 0))  #  this fills up the screen with black
         block = font.render(player_input, True, (255, 255, 255))
         rect = block.get_rect()
         rect.center = screen.get_rect().center
