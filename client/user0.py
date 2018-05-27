@@ -1,5 +1,6 @@
 import ctypes
 import pygame
+import select  #  this we use to block in wait for user input
 from pygame.locals import *
 import threading
 import player
@@ -9,18 +10,20 @@ lib_handle=ctypes.cdll.LoadLibrary(
         "/home/dim/Documents/projects/plvision/round_tennis/lib_c/tests/lib_test.so")
 
 def read_keyboard():
-    pygame.event.clear()
-    while True:
-        print("start")
+    running = True
+    player_input = ''
+    font = pygame.font.Font(None, 50)
+
+    while running:
         event = pygame.event.wait()    # here we wait until user hits keyboard
-        print("end")
-        player_input = ''
-        font = pygame.font.Font(None, 50)
-        if event.type == KEYDOWN:
-            if event.unicode == 'h':
-                player_input = 'hello'
-            elif event.type == QUIT:
-                return
+        event_list = pygame.event.get(KEYDOWN)
+        for event in event_list:
+            if event.type == KEYDOWN:
+                print('keydown')
+                if event.unicode == 'h':
+                    player_input = 'hello'
+                elif event.type == QUIT:
+                    return
 
         screen.fill ((0, 0, 0))
         block = font.render(player_input, True, (255, 255, 255))
@@ -45,6 +48,7 @@ update_screen_thread = threading.Thread(target = update_screen)
 read_keyboard_thread = threading.Thread(target = read_keyboard)
 
 pygame.init()    #  here we start all of the pygame stuff
+pygame.mixer.quit()
 screen = pygame.display.set_mode((480, 360))
 read_game_updates_thread.start()
 update_screen_thread.start()
