@@ -1,31 +1,22 @@
-/* mem... */
 #include <string.h> 
-/* socket */
-#include <sys/socket.h>
 #include <linux/if_packet.h>
 #include <net/ethernet.h>
-//#include <netpacket/packet.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
-#include <linux/if.h>		/* for ifreq. somehow net/if.h gives error 
-												lib_test.c:57:19: error: storage size of ‘ifreq_temp’ isn’t known
-												*/
-#include <sys/types.h> 	/* for u_char */
+#include <sys/socket.h>
+#include <sys/types.h>  /* for u_char */
+#include <linux/if.h>   /* for ifreq. somehow net/if.h gives error 
+                        lib_test.c:57:19: error: storage size of ‘iface_request’ isn’t known */
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-/* for socket */
-#define ETHER_TYPE_PACKET 0x5555
+#define ETHER_TYPE_PACKET 0x5555    /* used as propriate protocol type in socket initialization */
 
 static int                       id_socket;
 static struct   sockaddr_ll socket_address;
-static char buffer_for_send   [ ETH_FRAME_LEN ], 
-            buffer_for_reciev [ ETH_FRAME_LEN ]; /* 1514 */
-
-
-
-
+static char buffer_for_send   [ETH_FRAME_LEN], 
+            buffer_for_reciev [ETH_FRAME_LEN]; /* 1514 */
 
 void * fun2(void * a);
 int initialize_socket();
@@ -33,42 +24,37 @@ int socket_send( char * data , size_t  size , char * mac_destination );
 int socket_reciev( char * buffer_user  );
 const char * str_error();
 
-
 /* return str error human readable */
 const char * str_error()
 {
   return strerror( errno ); 
 }
 
-
 /* return status errno if 0 success */
 int  initialize_socket()
 {
 
-if ( ( id_socket = socket ( AF_PACKET, SOCK_RAW, htons( ETHER_TYPE_PACKET ))) != -1 )
-   {
-     struct   ifreq ifreq_temp;
-      memset( &ifreq_temp, 0, sizeof( ifreq_temp ));
+  if ((id_socket = socket (AF_PACKET, SOCK_RAW, htons( ETHER_TYPE_PACKET ))) != -1 )
+  {
+    struct   ifreq iface_request;
+    memset (&iface_request, 0, sizeof(iface_request));
 
-     /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-      strncpy( ifreq_temp.ifr_name, "wlo1" , 5);
-     /* !!!!!!!!!! search way to get default  interface name and set  libpcap or something else   !!!!!!!*/
-     /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    */
-        for( int i = 0; i < 2; ++i )
-        {
-         unsigned long request[ ] = { SIOCGIFHWADDR, SIOCGIFINDEX  };
-         if( ioctl( id_socket, request[i] , &ifreq_temp ) )  /*  ioctl  spoil data and that i am  eatch call copy  data into socket_add  */
-             break;
+    strncpy( iface_request.ifr_name, "wlo1" , 5);
+    for( int i = 0; i < 2; ++i )
+    {
+      unsigned long request[ ] = { SIOCGIFHWADDR, SIOCGIFINDEX  };
+      if( ioctl( id_socket, request[i] , &iface_request ) )  /*  ioctl  spoil data and that i am  eatch call copy  data into socket_add  */
+        break;
 
-         switch( i )
-         {
-           case 0 :
-                memcpy( &socket_address.sll_addr,    &ifreq_temp.ifr_hwaddr.sa_data,  sizeof( ifreq_temp.ifr_hwaddr.sa_data )); break; 
-           case 1 :
-        	memcpy( &socket_address.sll_ifindex, &ifreq_temp.ifr_ifindex,         sizeof( socket_address.sll_ifindex ));    break;
-         }
-        }
-	socket_address.sll_halen = ETH_ALEN;
+       switch( i )
+       {
+         case 0 :
+              memcpy( &socket_address.sll_addr,    &iface_request.ifr_hwaddr.sa_data,  sizeof( iface_request.ifr_hwaddr.sa_data )); break; 
+         case 1 :
+      memcpy( &socket_address.sll_ifindex, &iface_request.ifr_ifindex,         sizeof( socket_address.sll_ifindex ));    break;
+    }
+    }
+socket_address.sll_halen = ETH_ALEN;
    
    }  
    return errno; 
@@ -115,7 +101,7 @@ int socket_reciev( char * buffer_user )
 void * fun2(void * a)
 {
 	char b[] = "HELLO WORLD **************************************************************************************************************************";
-	u_char mac[] = { 0xff,0xff,0xff,0xff,0xff,0xff};
+	unsigned char mac[] = { 0xff,0xff,0xff,0xff,0xff,0xff};
 
 	for( int i = 0; i < 3; ++i)
 	{
