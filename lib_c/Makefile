@@ -3,7 +3,7 @@ CFLAGS = -std=c99 -ggdb3 -Wall
 all: test lib_send_receive.so
 
 test:
-	$(CC) $(CFLAGS) -o $@ test.c lib_send_receive.c -lpthread 
+	$(CC) $(CFLAGS) -o $@ lib_test.c lib_send_receive.c -lpthread 
 
 lib_send_receive.so: lib_send_receive.o
 	$(CC) -shared -o $@ $^
