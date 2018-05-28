@@ -2,6 +2,10 @@
 This is a general files that contain thought ideas about the project.
 Of course it will be updated numerous times.
 
+game designs assumes only one server in local network and single client per MAC
+address.
+If these conditions are not met, application behaviour is undefined.
+
 
 ***** MOTION *****
 This is a multiplayer game with max number of players - 4

@@ -1,39 +1,17 @@
-import ctypes
-import player
-import field
-import pygame
-from pygame.locals import *
 import threading
+from uuid import getnode as get_mac
 
+class GameServer():
+    def __init__(self):
+        self.mac = get_mac()  #   get mac address as 48 bit int
+        self.active_clients_mac = []
+        self.send_buf = []
+        self.read_buf = []
 
-def read_keyboard():
-	pygame.event.clear()
-	while True:
-		print("start")
-		event = pygame.event.wait()			# here we wait until user hits keyboard
-		print("end")
-		player_input = ''
-		font = pygame.font.Font(None, 50)
-		if event.type == KEYDOWN:
-			if event.unicode == 'h':
-				player_input = 'hello'
-		elif event.type == QUIT:
-			return
+    def run(self):
+        print ('Server started. Waiting for connections...');
+        
 
-		screen.fill ((0, 0, 0))
-		block = font.render(player_input, True, (255, 255, 255))
-		rect = block.get_rect()
-		rect.center = screen.get_rect().center
-		screen.blit(block, rect)
-		pygame.display.flip()
-
-#create thread to get key input
-read_keyboard_thread = threading.Thread(target = read_keyboard)
-
-#create thread to display field
-#..TODO..
-
-pygame.init()
-screen = pygame.display.set_mode((480, 360))
-read_keyboard()
-#read_keyboard_thread.start()
+if __name__ == "__main__":
+    g = GameServer()
+    g.run()
