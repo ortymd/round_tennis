@@ -1,10 +1,10 @@
 /*
-    this file for send and receive DATA  on protocol  Level 2 
-    exaple
- const int size = 100
- char buffer_data[size] ; where size >= (64 - 14) && size <= 1500
- char mac_address[6] = {0xff,0xff,0xff,0xff,0xff,0xff }; broadcast
- first call initialize_socket(); 
+   this file allows to send and receive DATA  on protocol  Level 2 
+   example
+   const int size = 100
+   char buffer_data[size] ; where size >= (64 - 14) && size <= 1500
+   char mac_address[6] = {0xff,0xff,0xff,0xff,0xff,0xff }; broadcast
+   first call initialize_socket(); 
 
     if returned  value 0 call finished fine
     else retun state error and it is same that errno
@@ -18,105 +18,56 @@
   close_socket();
 */
 
+#include "lib_send_receiv.h"
 
+extern int socket_fd;
+extern struct sockaddr_ll sock_addr;
+extern char ether_frame_send [ETH_FRAME_LEN]; 
+extern char ether_frame_receive [ETH_FRAME_LEN];
+extern *char iface_name;    /* network interface used for connection */
 
-
-
-
-
-/* memcpy() */
-#include <string.h> 
-
-#include <sys/socket.h>
-#include <sys/types.h>  /* for u_char */
-#include <linux/if_packet.h>
-#include <net/ethernet.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <linux/if.h>  /* it appears that when using net/if.h instead of linux/if.h
-                        and compiling with:
-                        gcc -c -std=c99 lib_send_receive.c
-                        compiler gives error:
-
-                        lib_send_receiv.c: In function ‘initialize_socket’:
-                        lib_send_receiv.c:80:28: error: storage size of ‘ifreq_temp’ isn’t known
-                                     struct   ifreq ifreq_temp;
-
-                        not sure what might be the reason and unfortunately we do not have time
-                        at the moment to check it. This is just a comment for someone experienced
-                        and willing to check the issue. */
-
-#include <errno.h>
-#include <unistd.h>     /* for sleep() and close() syscalls */
-
-/*
-  It is our  EtherType protocol
-  and  we will listen and send
-  just our protocol
- */
-#define ETHER_TYPE_PACKET 0x5555
-//typedef unsigned char u_char;
-
-static int  descriptor_socket;
-
-/* data such as your mac address , index interface */
-static struct   sockaddr_ll socket_address;
-
-static char ether_frame_send   [ ETH_FRAME_LEN ], /* 1514 */
-            ether_frame_receive [ ETH_FRAME_LEN ]; /* 1514 */
-
-/* list all functions */
-int initialize_socket();
-int socket_send(char * , size_t , char * );
-int socket_receive(char * );
-void close_socket();
-const char * str_error();
-
-/*
-  create description socket
-  return errno 
-  0 success
-*/
 int  initialize_socket()
 {
-    if (( descriptor_socket = socket (AF_PACKET, SOCK_RAW, htons(ETHER_TYPE_PACKET)) ) != -1 )
+  int res = -1;
+  struct ifreq iface_req;
+
+  socket_fd = socket (AF_PACKET, SOCK_RAW, ETHER_TYPE_PACKET);
+  if (socket_fd != -1 )
+  { 
+    memset (&iface_req, 0, sizeof (iface_req));
+    memset (&sock_addr, 0, sizeof(SA));
+    strncpy( ifreq_temp.ifr_name, iface_name, 5);  /* .TO DO. add option to choose dflt interface */
+
+    res = ioctl (socket_fd, SIOCGIFHWADDR, &iface_req);   /* here we get localhost mac */
+    if (res == -1)
     {
-            struct   ifreq ifreq_temp;
-            memset(&ifreq_temp, 0, sizeof( ifreq_temp ));
-            memset(&socket_address, 0, sizeof(struct sockaddr_ll));
-     /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-      strncpy( ifreq_temp.ifr_name, "wlo1" , 5);
-     /* !!!!!!!!!! search way to get default  interface name and set  libpcap or something else   !!!!!!!*/
-     /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    */
-         unsigned long request[] = {
-                                     SIOCGIFHWADDR,
-                                     SIOCGIFINDEX
-                                   };
+      perror("Failed to initialize socket.\nError: ioctl()\t");
+      return res;
+    }
 
-           /*  ioctl  spoil data and that i am  eatch call copy  data into socket_add  */
-            for (int i = 0; i < sizeof(request) / sizeof(*request); ++i)
-                {
-                     if ( ioctl(descriptor_socket, request[i], &ifreq_temp) )     
-                        break;
+    memcpy (&sock_addr.sll_addr, &iface_req.ifr_hwaddr.sa_data,
+            sizeof (ifreq_temp.ifr_hwaddr.sa_data));
 
-                     switch(i)
-                           {
-                               case 0 :  memcpy(&socket_address.sll_addr,
-                                                &ifreq_temp.ifr_hwaddr.sa_data,
-                                                sizeof( ifreq_temp.ifr_hwaddr.sa_data)); 
-                                   break; 
-                               case 1 :  memcpy(&socket_address.sll_ifindex,
-                                                &ifreq_temp.ifr_ifindex,
-                                                sizeof( socket_address.sll_ifindex )); 
-                                   break;
-                           }
-                }
-	    socket_address.sll_halen = ETH_ALEN;
+    res = ioctl (socket_fd, SIOCGIFINDEX. &iface_req);   /* here we get device interface index */
+    if (res == -1)
+    {
+      perror("Failed to initialize socket.\nError: ioctl()\t");
+      return res;
+    }
+
+    memcpy (&sock_addr.sll_ifindex, &iface_req.ifr_ifindex,
+            sizeof (iface_req,ifr_ifindex)); 
+
+	sock_addr.sll_halen = ETH_ALEN;
    
-      }  
-    return errno; 
+    return res; 
+  }
+  else
+  {
+    perror("Error: socket()\t");
+    return res;
+  }
 }
-
 
 /*
    data for send must be more ((60 min ether_frame) - (14 head ether_frame)) => 46 byte
@@ -126,7 +77,7 @@ int  initialize_socket()
    set EtherType
    sendto()                                
 */
-int socket_send(char * data_for_send, size_t  size_data_send, char * mac_destination)
+int send (char *data, size_t data_sz, char *mac_destination)
 {
     if ( data_for_send && mac_destination && size_data_send )
        {
@@ -150,25 +101,34 @@ int socket_send(char * data_for_send, size_t  size_data_send, char * mac_destina
     return errno;
 }
 
-
-
-/* copy receive frame into  buffer  */
-int socket_receive(char * buffer_user)
+int receive (char *buf)  /* copy received frame into buffer  */
 {  
-    /* recv sleep untill ether_frame doesnt arrive */
-    size_t size_frame_receiv = recv(descriptor_socket, ether_frame_receive, ETH_DATA_LEN, 0); 
-    if ( buffer_user && !errno ) /* buffer_user != NULL and errno is 0 */
-       memcpy(buffer_user, ether_frame_receive, size_frame_receiv);
- 
-    return errno;
-}
+  size_t res = -1;
+  if (buf == NULL)
+  {
+    fprintf (stderr, "Buffer set to 0x0. Cannot copy to buffer.\n");
+    return res;
+  }
 
+  res = recv (socket_fd, ether_frame_receive, ETH_DATA_LEN, 0); 
+
+  if (res == -1)
+  {
+    perror ("Error: recv()\t");
+  }
+  else
+  {
+    memcpy(buf, ether_frame_receive, size_frame_receiv);
+  }
+
+  return res;
+ 
+}
 
 void close_socket()
 {
-    close(descriptor_socket);
+    close (socket_fd);
 }
-
 
 /*
   return str error human readable
