@@ -30,7 +30,7 @@
   and  we will listen and send
   just our protocol
  */
-#define ETHER_TYPE_PACKET 0x5555
+#define ETHER_TYPE_PACKET 0x1234
 typedef struct sockaddr SA;       /* this is general purpose sockaddr used in sendto() syscall */
 typedef struct sockaddr_ll SA_LL; /* this is special sockaddr for raw sockets */
 typedef struct ethhdr EH;

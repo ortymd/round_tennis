@@ -31,14 +31,14 @@ void* test_receive (void* buf)
 {
   int res = 0;
   printf("Starting receive thread.\n"); 
-  sleep (1);
+  sleep (3);
   res = receive (buf);
   if (res == -1)
     perror ("Error: receive()\t");
   else
   {
     printf ("***Message received. Received bytes:\t%d\n", res);
-    printf ("Data in message:\n%s\n", (char*)buf);
+    printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
   }
   return buf;
 }

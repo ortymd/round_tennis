@@ -32,11 +32,16 @@ int socket_init()
   struct ifreq iface_req;   /* interface request */
 
   socket_fd = socket (AF_PACKET, SOCK_RAW, ETHER_TYPE_PACKET);
-  if (socket_fd != -1 )
+  if (socket_fd == -1 )
+  {
+    perror("Error: socket_init()\t");
+    return res;
+  }
+  else
   { 
     memset (&iface_req, 0, sizeof (iface_req));
     memset (&sock_addr, 0, sizeof(SA_LL));
-    strncpy( iface_req.ifr_name, iface_name, sizeof (iface_req));  /* .TO DO. add option to choose dflt interface */
+    strncpy( iface_req.ifr_name, iface_name, sizeof (iface_req.ifr_name));  /* .TO DO. add option to choose dflt interface */
 
     res = ioctl (socket_fd, SIOCGIFHWADDR, &iface_req);   /* here we get localhost mac */
     if (res == -1)
@@ -57,14 +62,9 @@ int socket_init()
 
     memcpy (&sock_addr.sll_ifindex, &iface_req.ifr_ifindex,
             sizeof (iface_req.ifr_ifindex)); 
-	  sock_addr.sll_halen = ETH_ALEN;
+	sock_addr.sll_halen = ETH_ALEN;
 
     return res; 
-  }
-  else
-  {
-    perror("Error: socket_init()\t");
-    return res;
   }
 }
 
@@ -88,13 +88,15 @@ int send_data (char *data, size_t data_sz, char *mac_destination)
     }
     else  
     {
-        struct ethhdr * frame  = (struct ethhdr *)(ether_frame_send);
-        memcpy(frame->h_dest, mac_destination, ETH_ALEN);         /* set mac destination */
-        memcpy(frame->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
-        frame->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
-        memcpy (frame + sizeof( struct ethhdr), data, data_sz);   /* copy data into buffer_send */
+        struct ethhdr *frame_hdr  = (struct ethhdr *)(ether_frame_send);
+        memcpy(frame_hdr->h_dest, mac_destination, ETH_ALEN);         /* set mac destination */
+        memcpy(frame_hdr->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
+        frame_hdr->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
+        memcpy (frame_hdr + 1, data, data_sz);   /* copy data into buffer_send. 
+                                                  we add 1 as frame_hdr is of size ETH_HLEN, thus adding 1
+                                                  actually increases address by ETH_HLEN bytes (14) */
 
-        res = sendto (socket_fd, frame,  data_sz + ETH_HLEN, 0,   /* no flags specified */
+        res = sendto (socket_fd, frame_hdr,  data_sz + ETH_HLEN, 0,   /* no flags specified */
                      (SA*)&sock_addr, sizeof(SA_LL));
         if (res == -1)
           perror("Error: sendto()\t");
