@@ -3,11 +3,10 @@ import pygame
 import select  #  this we use to block in wait for user input
 from pygame.locals import *
 import threading
-import player
 
 # we use this handle to call functions from lib_test.so
-lib_handle=ctypes.cdll.LoadLibrary(
-        "/home/dim/Documents/projects/plvision/round_tennis/lib_c/tests/lib_test.so")
+lib_handle=ctypes.cdll.LoadLibrary("./lib_c/lib_send_receive.so")
+
 def read_keyboard():
     running = True
     player_input = ''

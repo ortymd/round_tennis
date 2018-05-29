@@ -97,6 +97,8 @@ int send_data (char *data, size_t data_sz, char *mac_destination)
 
         res = sendto (socket_fd, frame,  data_sz + ETH_HLEN, 0,   /* no flags specified */
                      (SA*)&sock_addr, sizeof(SA_LL));
+        if (res == -1)
+          perror("Error: sendto()\t");
     }
   }
     return res;
@@ -119,7 +121,8 @@ int receive (char *buf)  /* copy received frame into buffer  */
   }
   else
   {
-    memcpy(buf, ether_frame_receive, size_frame_receiv);
+    memcpy(buf, ether_frame_receive, res);  /* copy number of bytes 
+                                            that were succesfully received */
   }
 
   return res;

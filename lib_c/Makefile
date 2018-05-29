@@ -1,9 +1,6 @@
 CFLAGS = -std=c99 -ggdb3 -Wall
 
-all: test lib_send_receive.so
-
-test:
-	$(CC) $(CFLAGS) -o $@ lib_send_receive.c
+all: lib_send_receive.so
 
 lib_send_receive.so: lib_send_receive.o
 	$(CC) -shared -o $@ $^
