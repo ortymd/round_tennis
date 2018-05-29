@@ -1,5 +1,8 @@
+#ifndef LIB_SEND_RECEIVE
+#define LIB_SEND_RECEIVE
 
 #include <string.h> 
+#include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>  /* for u_char */
 #include <linux/if_packet.h>
@@ -28,16 +31,20 @@
   just our protocol
  */
 #define ETHER_TYPE_PACKET 0x5555
-typedef struct sockaddr_ll SA;
+typedef struct sockaddr SA;       /* this is general purpose sockaddr used in sendto() syscall */
+typedef struct sockaddr_ll SA_LL; /* this is special sockaddr for raw sockets */
+typedef struct ethhdr EH;
 
 int  socket_fd;
-SA sock_addr;
+SA_LL sock_addr;
 char ether_frame_send [ETH_FRAME_LEN]; 
 char ether_frame_receive [ETH_FRAME_LEN];
 char *iface_name = "wlo1";
 
 int socket_init();
-int send(char *data_for_send, size_t  size_data_send, char *mac_destination)
+int send_data (char *data_for_send, size_t  size_data_send, char *mac_destination);
 int receive(char *buf);
 void close_socket();
 const char * str_error();
+
+#endif
