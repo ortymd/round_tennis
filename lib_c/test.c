@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lib_send_receive.h"
+#include <lib_send_receive.h>
 
 typedef struct 
 {

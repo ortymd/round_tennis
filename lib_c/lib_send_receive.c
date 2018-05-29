@@ -24,9 +24,9 @@ extern int socket_fd;
 extern SA_LL sock_addr;
 extern char ether_frame_send [ETH_FRAME_LEN]; 
 extern char ether_frame_receive [ETH_FRAME_LEN];
-extern char *iface_name;    /* network interface used for connection */
+char *iface_name = "enps30";     /* network interface used for connection */
 
-int  initialize_socket()
+int socket_init()
 {
   int res = -1;
   struct ifreq iface_req;   /* interface request */
