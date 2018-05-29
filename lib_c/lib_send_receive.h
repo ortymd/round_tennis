@@ -39,7 +39,7 @@ int  socket_fd;
 SA_LL sock_addr;
 char ether_frame_send [ETH_FRAME_LEN]; 
 char ether_frame_receive [ETH_FRAME_LEN];
-char *iface_name = "wlo1";
+char *iface_name = "enp3s0";
 
 int socket_init();
 int send_data (char *data_for_send, size_t  size_data_send, char *mac_destination);

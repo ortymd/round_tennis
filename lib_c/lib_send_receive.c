@@ -36,7 +36,7 @@ int  initialize_socket()
   { 
     memset (&iface_req, 0, sizeof (iface_req));
     memset (&sock_addr, 0, sizeof(SA_LL));
-    strncpy( iface_req.ifr_name, iface_name, 5);  /* .TO DO. add option to choose dflt interface */
+    strncpy( iface_req.ifr_name, iface_name, sizeof (iface_req));  /* .TO DO. add option to choose dflt interface */
 
     res = ioctl (socket_fd, SIOCGIFHWADDR, &iface_req);   /* here we get localhost mac */
     if (res == -1)
@@ -57,9 +57,8 @@ int  initialize_socket()
 
     memcpy (&sock_addr.sll_ifindex, &iface_req.ifr_ifindex,
             sizeof (iface_req.ifr_ifindex)); 
+	  sock_addr.sll_halen = ETH_ALEN;
 
-	sock_addr.sll_halen = ETH_ALEN;
-   
     return res; 
   }
   else
