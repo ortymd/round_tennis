@@ -1,4 +1,4 @@
-CFLAGS = -ggdb3 -Wall -I./
+CFLAGS = -std=c99 -ggdb3 -Wall -I./
 LDFLAGS = -L./
 LDLIBS = -lpthread -l:lib_send_receive.o
 

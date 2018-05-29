@@ -24,7 +24,7 @@ extern int socket_fd;
 extern SA_LL sock_addr;
 extern char ether_frame_send [ETH_FRAME_LEN]; 
 extern char ether_frame_receive [ETH_FRAME_LEN];
-char *iface_name = "enps30";     /* network interface used for connection */
+char *iface_name = "lo";     /* network interface used for connection */
 
 int socket_init()
 {
@@ -63,7 +63,7 @@ int socket_init()
   }
   else
   {
-    perror("Error: socket()\t");
+    perror("Error: socket_init()\t");
     return res;
   }
 }
@@ -91,7 +91,7 @@ int send_data (char *data, size_t data_sz, char *mac_destination)
         struct ethhdr * frame  = (struct ethhdr *)(ether_frame_send);
         memcpy(frame->h_dest, mac_destination, ETH_ALEN);         /* set mac destination */
         memcpy(frame->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
-        frame->h_proto =  htons(ETHER_TYPE_PACKET);               /* set type protocol */
+        frame->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
         memcpy (frame + sizeof( struct ethhdr), data, data_sz);   /* copy data into buffer_send */
 
         res = sendto (socket_fd, frame,  data_sz + ETH_HLEN, 0,   /* no flags specified */

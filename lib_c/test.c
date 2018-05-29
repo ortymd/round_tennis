@@ -14,25 +14,32 @@ typedef struct
 void* test_send_data (void *test_payload)
 {
   int res = 0;
+  
   payload *test_payload_ptr = (payload*)test_payload;
 
+  printf("Starting send_data thread.\n"); 
   res = send_data (test_payload_ptr->data, test_payload_ptr->data_sz,
-               test_payload_ptr->mac_dest);
-
+                 test_payload_ptr->mac_dest);
   if (res == -1)
     perror ("Error: send()\t");
-
+  else
+    printf ("***Message sent. Sent bytes:\t%d\n", res);
   return test_payload;
 }
 
 void* test_receive (void* buf)
 {
   int res = 0;
-  
+  printf("Starting receive thread.\n"); 
+  sleep (1);
   res = receive (buf);
   if (res == -1)
     perror ("Error: receive()\t");
-
+  else
+  {
+    printf ("***Message received. Received bytes:\t%d\n", res);
+    printf ("Data in message:\n%s\n", (char*)buf);
+  }
   return buf;
 }
 
@@ -44,7 +51,7 @@ int main()
   char buf[50];
 
   const int sz = 50;
-  char mac_dest[6] = {0xff};
+  char mac_dest[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   payload test_payload;
 
   test_payload.data = "this is a test messsage";  /* setup test payload */
@@ -54,7 +61,9 @@ int main()
   pthread_t send_data_thread;
   pthread_t receive_thread;
 
-  socket_init();    /* initialize common socket for both threads */
+  res = socket_init();    /* initialize common socket for both threads */
+  if (res == -1)
+    perror("Error: socket_init()\t");
 
   res = pthread_create (&send_data_thread, 0, test_send_data, (void*)&test_payload);
   if (res == -1)
