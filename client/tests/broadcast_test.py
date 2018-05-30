@@ -27,10 +27,11 @@ def send_data_test():
     if TEST == 0:
         send_data = lib_handle.send_data                        # just for convenience
         send_data.argtypes = [c_char_p, c_uint, c_char_p]       # types of args that C function requires
-
         mac_dest = b'\xff\xff\xff\xff\xff\xff'                  # build bytes object here
-        send_data_thread = threading.Thread (target = lib_handle.send_data,
-                                             args = (data, data_sz, mac_dest))
+        for i in range (10):
+            print ("Sending\t", i)
+            send_data (data, data_sz, mac_dest)
+            time.sleep(1)
     elif TEST == 1:
         send_data_thread = threading.Thread (target = lib_handle.send_data,
                                              args = (data, data_sz, ctypes.c_char_p(mac_dest)))
@@ -48,19 +49,22 @@ def receive_test():
     receive.argtypes = [c_char_p]
     buf_sz = 1<<6
     buf = ctypes.create_string_buffer (buf_sz)      # here we allocate memory which is used to store payload
-                                                    # note, that eth headers are written to buffer as well
-    receive_thread = threading.Thread (target = lib_handle.receive,
-                                       args = (buf,))
-    time.sleep (1)                              # give time to send thread to send data
-    print ('receive thread started.')
-    receive_thread.start()
-    print ('receive thread finished.')
+
+    print ('Receive func started.')
+    receive (buf) 
     print ('Received message is (raw bytes):\t', repr(buf.raw));
+
     if repr(buf.value) != data:
         print ('TEST FAILED')
     else:
         print ('TEST SUCCESS')
 
 lib_handle.socket_init()     # initialize global socket for communication
-send_data_test()
-receive_test()
+
+send_data_test_thread = threading.Thread (target = send_data_test, args = ())
+receive_test_thread = threading.Thread (target = receive_test, args = ())
+
+send_data_test_thread.start()
+receive_test_thread.start()
+
+lib_handle.close_socket()
