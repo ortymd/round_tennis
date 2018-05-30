@@ -4,8 +4,8 @@
 #include <string.h>
 #include <lib_send_receive.h>
 
-#define EXCLUDE_SEND 0
-#define EXCLUDE_RECEIVE 1
+#define INCLUDE_SEND 1
+#define INCLUDE_RECEIVE 0
 
 typedef struct 
 {
@@ -16,14 +16,14 @@ typedef struct
 
 void* test_send_data (void *test_payload)
 {
-#if EXCLUDE_SEND == 0
+#if INCLUDE_SEND == 1
   int res = 0;
   
   payload *test_payload_ptr = (payload*)test_payload;
 
   printf("Starting send_data thread.\n"); 
   res = send_data (test_payload_ptr->data, test_payload_ptr->data_sz,
-                 test_payload_ptr->mac_dest);
+                  test_payload_ptr->mac_dest);
   if (res == -1)
     perror ("Error: send()\t");
   else
@@ -34,7 +34,7 @@ void* test_send_data (void *test_payload)
 
 void* test_receive (void* buf)
 {
-#if EXCLUDE_RECEIVE == 0
+#if INCLUDE_RECEIVE == 1
   int res = 0;
   printf("Starting receive thread.\n"); 
   sleep (3);
