@@ -24,7 +24,16 @@ extern int socket_fd;
 extern SA_LL sock_addr;
 extern char ether_frame_send [ETH_FRAME_LEN]; 
 extern char ether_frame_receive [ETH_FRAME_LEN];
+
+#define TEST_INTERFACE 2    /* choose here which interface to test */
+
+#if TEST_INTERFACE == 0
 char *iface_name = "lo";     /* network interface used for connection */
+#elif TEST_INTERFACE == 1
+char *iface_name = "vboxnet2";     /* network interface used for connection */
+#elif TEST_INTERFACE == 2
+char *iface_name = "eth2";     /* network interface used for connection */
+#endif
 
 int socket_init()
 {
@@ -76,20 +85,20 @@ int socket_init()
    set EtherType
    sendto()                                
 */
-int send_data (char *data, size_t data_sz, char *mac_destination)
+int send_data (const char *data, size_t data_sz, const char *mac_dest)
 {
   int res = 0;
-  if (data && mac_destination && data_sz)
+  if (data && data_sz && mac_dest)      /* here we simply guard ourseleves from 0x0 addresses passed to func */
   {
     if ((data_sz < (ETH_ZLEN - ETH_HLEN)) || (data_sz  >  ETH_DATA_LEN) )
     {
-      fprintf (stderr, "Invalid size of data_frame! Cannot send.");
+      fprintf (stderr, "Invalid size of data_frame! Cannot send.\n");
       res = EINVAL;
     }
     else  
     {
-        struct ethhdr *frame_hdr  = (struct ethhdr *)(ether_frame_send);
-        memcpy(frame_hdr->h_dest, mac_destination, ETH_ALEN);         /* set mac destination */
+        struct ethhdr *frame_hdr  = (struct ethhdr *)(ether_frame_send); /* just for convenience */
+        memcpy(frame_hdr->h_dest, mac_dest, ETH_ALEN);         /* put mac dest to header */
         memcpy(frame_hdr->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
         frame_hdr->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
         memcpy (frame_hdr + 1, data, data_sz);   /* copy data into buffer_send. 
@@ -123,7 +132,7 @@ int receive (char *buf)  /* copy received frame into buffer  */
   else
   {
     memcpy(buf, ether_frame_receive, res);  /* copy number of bytes 
-                                            that were succesfully received */
+                                            that were successfully received */
   }
 
   return res;

@@ -4,6 +4,9 @@
 #include <string.h>
 #include <lib_send_receive.h>
 
+#define EXCLUDE_SEND 0
+#define EXCLUDE_RECEIVE 1
+
 typedef struct 
 {
   char *data;
@@ -13,6 +16,7 @@ typedef struct
 
 void* test_send_data (void *test_payload)
 {
+#if EXCLUDE_SEND == 0
   int res = 0;
   
   payload *test_payload_ptr = (payload*)test_payload;
@@ -24,11 +28,13 @@ void* test_send_data (void *test_payload)
     perror ("Error: send()\t");
   else
     printf ("***Message sent. Sent bytes:\t%d\n", res);
+#endif
   return test_payload;
 }
 
 void* test_receive (void* buf)
 {
+#if EXCLUDE_RECEIVE == 0
   int res = 0;
   printf("Starting receive thread.\n"); 
   sleep (3);
@@ -40,6 +46,7 @@ void* test_receive (void* buf)
     printf ("***Message received. Received bytes:\t%d\n", res);
     printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
   }
+#endif
   return buf;
 }
 
