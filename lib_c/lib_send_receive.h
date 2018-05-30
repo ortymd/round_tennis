@@ -2,6 +2,7 @@
 #define LIB_SEND_RECEIVE
 
 #include <string.h> 
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>  /* for u_char */
@@ -45,6 +46,6 @@ int socket_init();
 int send_data (const char *data, size_t data_sz, const char *mac_dest);
 int receive(char *buf);
 void close_socket();
-const char * str_error();
+const char *str_error();
 
 #endif
