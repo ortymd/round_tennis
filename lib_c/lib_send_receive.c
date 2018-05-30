@@ -33,6 +33,8 @@ char *iface_name = "lo";     /* network interface used for connection */
 char *iface_name = "vboxnet2";     /* network interface used for connection */
 #elif TEST_INTERFACE == 2
 char *iface_name = "eth2";     /* network interface used for connection */
+#elif TEST_INTERFACE == 3
+char *iface_name = "enps30";     /* network interface used for connection */
 #endif
 
 int socket_init()
@@ -43,8 +45,8 @@ int socket_init()
   socket_fd = socket (AF_PACKET, SOCK_RAW, ETHER_TYPE_PACKET);
   if (socket_fd == -1 )
   {
-    perror("Error: socket_init()\t");
-    return res;
+    perror("Error: socket_init()\t");       /* end program if failed to init socket */
+    exit (res);
   }
   else
   { 
@@ -116,14 +118,16 @@ int send_data (const char *data, size_t data_sz, const char *mac_dest)
 
 int receive (char *buf)  /* copy received frame into buffer  */
 {  
-  size_t res = -1;
+  int res = -1;
   if (buf == NULL)
   {
     fprintf (stderr, "Buffer set to 0x0. Cannot copy to buffer.\n");
     return res;
   }
 
+  printf ("Receiving data...\n");
   res = recv (socket_fd, ether_frame_receive, ETH_DATA_LEN, 0); 
+  printf ("Succesfully received:\t%d bytes", res);
 
   if (res == -1)
   {
@@ -144,10 +148,7 @@ void close_socket()
     close (socket_fd);
 }
 
-/*
-  return str error human readable
-*/
-const char * str_error()
+const char *str_error() /* return str error human readable */
 {
     return strerror( errno ); 
 }
