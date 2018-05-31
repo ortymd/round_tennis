@@ -1,28 +1,33 @@
 import ctypes
 import pygame
-import select  #  this we use to block in wait for user input
 from pygame.locals import *
 import threading
 
-# we use this handle to call functions from lib_test.so
-lib_handle=ctypes.cdll.LoadLibrary("./lib_c/lib_send_receive.so")
+lib_handle = ctypes.cdll.LoadLibrary("../lib_c/lib_send_receive.so")
 
 class GameClient():
     def __init__(self):
-    self.mac = get_mac()  #   get mac address as 48 bit int
+        self.mac = get_mac()  #   get mac address as 48 bit int
 
-    self.lib_handle = ctypes.cdll.LoadLibrary("../lib_c/lib_send_receive.so")
-    self.receive = self.lib_handle.receive       # C func
-    self.send_data = self.lib_handle.send_data   # C func
+        self.lib_handle = ctypes.cdll.LoadLibrary(       # we use this handle          
+                          "../lib_c/lib_send_receive.so" # to call functions from lib
+                          )                              
+        self.receive = self.lib_handle.receive       # get handle to lib receive() func
+        self.send_data = self.lib_handle.send_data   # get handle to lib send_data() func
 
-    self.buf_sz = 1<<6
-    self.send_data_buf = ctypes.create_string_buffer (self.buf_sz) # byte object data from which is wriiten/send to in C part
-    self.receive_buf = ctypes.create_string_buffer (self.buf_sz) # byte object to write data to in C part
+        self.buf_sz = 1<<10           # TODO update this to ETH_DATA_LEN
+        self.send_data_buf = ctypes.create_string_buffer (self.buf_sz) # byte object data from which is wriiten/send to in C part
+        self.receive_buf = ctypes.create_string_buffer (self.buf_sz) # byte object to write data to in C part
 
-    self.lib_handle.socket_init()
+        self.lib_handle.socket_init()
+
+    def __del__(self):
+        self.lib_handle.socket_close()
 
     def discover_server(self):
-                    self.send_data (self.send_data_buf, self.buf_sz, self.mac)  # send message to broadcast
+        lib_handle.discover_server()
+
+    def quit_game(self):
 
     def read_keyboard(self):
         running = True
