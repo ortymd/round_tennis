@@ -7,27 +7,46 @@ import threading
 # we use this handle to call functions from lib_test.so
 lib_handle=ctypes.cdll.LoadLibrary("./lib_c/lib_send_receive.so")
 
-def read_keyboard():
-    running = True
-    player_input = ''
-    font = pygame.font.Font(None, 50)
+class GameClient():
+    def __init__(self):
+    self.mac = get_mac()  #   get mac address as 48 bit int
 
-    pygame.event.clear()
-    while running:
-        event = pygame.event.wait()    # here we wait until user hits keyboard
-        if event.type == KEYDOWN:
-            print('keydown')
-            if event.unicode == 'h':
-                player_input = 'hello'
-        elif event.type == QUIT:
-            break
+    self.lib_handle = ctypes.cdll.LoadLibrary("../lib_c/lib_send_receive.so")
+    self.receive = self.lib_handle.receive       # C func
+    self.send_data = self.lib_handle.send_data   # C func
 
-        screen.fill ((0, 0, 0))  #  this fills up the screen with black
-        block = font.render(player_input, True, (255, 255, 255))
-        rect = block.get_rect()
-        rect.center = screen.get_rect().center
-        screen.blit(block, rect)
-        pygame.display.flip()
+    self.buf_sz = 1<<6
+    self.send_data_buf = ctypes.create_string_buffer (self.buf_sz) # byte object data from which is wriiten/send to in C part
+    self.receive_buf = ctypes.create_string_buffer (self.buf_sz) # byte object to write data to in C part
+
+    self.lib_handle.socket_init()
+
+    def discover_server(self):
+                    self.send_data (self.send_data_buf, self.buf_sz, self.mac)  # send message to broadcast
+
+    def read_keyboard(self):
+        running = True
+        font = pygame.font.Font(None, 50)
+        mac_broadcast = b'\xff\xff\xff\xff\xff\xff'                  # build bytes object here
+
+        pygame.event.clear()
+        while running:
+            event = pygame.event.wait()    # here we wait until user hits keyboard
+            if event.type == KEYDOWN:
+                print('keydown')
+                if event.unicode == 'h':
+                    self.send_data_buf = b'hello'
+                    self.send_data (self.send_data_buf, self.buf_sz, mac_broadcast)  # send message to broadcast
+                                                                                # TODO...update to server MAC
+            elif event.type == QUIT:
+                break
+
+            screen.fill ((0, 0, 0))  #  this fills up the screen with black
+            block = font.render(player_input, True, (255, 255, 255))
+            rect = block.get_rect()
+            rect.center = screen.get_rect().center
+            screen.blit(block, rect)
+            pygame.display.flip()
 
 def update_screen():
     return
