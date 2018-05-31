@@ -5,9 +5,9 @@
 #include <lib_send_receive.h>
 
 #define INCLUDE_SEND 1
-#define INCLUDE_RECEIVE 0
+#define INCLUDE_RECEIVE 1
 
-typedef struct 
+typedef struct      /* need to put all here in one structure in order to pass to thread */
 {
   char *data;
   unsigned data_sz;
@@ -37,13 +37,13 @@ void* test_receive (void* buf)
 #if INCLUDE_RECEIVE == 1
   int res = 0;
   printf("Starting receive thread.\n"); 
-  sleep (3);
+  sleep (1);
   res = receive (buf);
   if (res == -1)
     perror ("Error: receive()\t");
   else
   {
-    printf ("***Message received. Received bytes:\t%d\n", res);
+    printf ("\n***Message received. Received bytes:\t%d\n", res);
     printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
   }
 #endif
@@ -54,16 +54,17 @@ void* test_receive (void* buf)
 int main()
 {
   int res = 0;
+  char *data = "this is a test messsage";
+  unsigned data_sz = strlen (data);
 
-  char buf[50];
+  payload test_payload;                        /* set up payload */
+  test_payload.data = malloc (ETH_DATA_LEN);   /* get part of memory that we can modify (append 0 to payload) */
+  memcpy (test_payload.data, data, data_sz);
+  test_payload.data_sz = data_sz;
+  memset (test_payload.mac_dest, 0xff, ETH_ALEN);
 
-  const int sz = 50;
-  char mac_dest[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  payload test_payload;
-
-  test_payload.data = "this is a test messsage";  /* setup test payload */
-  test_payload.data_sz = sz;
-  memcpy (test_payload.mac_dest, mac_dest, 6);
+  char *buf = malloc (ETH_DATA_LEN);
+  memset (buf, 0, ETH_DATA_LEN);
 
   pthread_t send_data_thread;
   pthread_t receive_thread;
@@ -82,7 +83,9 @@ int main()
 
   pthread_join (send_data_thread, NULL);
   pthread_join (receive_thread, NULL);
+  free (test_payload.data);
+
+  socket_close();
 
   exit(0);
-
 }
