@@ -19,14 +19,13 @@
 */
 
 #include "lib_send_receive.h"
+int  socket_fd;
+SA_LL sock_addr;
+char ether_frame_send [ETH_FRAME_LEN]; 
+char ether_frame_receive [ETH_FRAME_LEN];
 
-extern int socket_fd;
-extern SA_LL sock_addr;
-extern char ether_frame_send [ETH_FRAME_LEN]; 
-extern char ether_frame_receive [ETH_FRAME_LEN];
 
-#define TEST_INTERFACE 2    /* choose here which interface to test */
-
+#define TEST_INTERFACE 0    /* choose here which interface to test */
 #if TEST_INTERFACE == 0
 char *iface_name = "lo";     /* network interface used for connection */
 #elif TEST_INTERFACE == 1
@@ -34,7 +33,7 @@ char *iface_name = "vboxnet2";     /* network interface used for connection */
 #elif TEST_INTERFACE == 2
 char *iface_name = "eth2";     /* network interface used for connection */
 #elif TEST_INTERFACE == 3
-char *iface_name = "enps30";     /* network interface used for connection */
+char *iface_name = "enp3s0";     /* network interface used for connection */
 #endif
 
 int socket_init()
@@ -73,7 +72,7 @@ int socket_init()
 
     memcpy (&sock_addr.sll_ifindex, &iface_req.ifr_ifindex,
             sizeof (iface_req.ifr_ifindex)); 
-	sock_addr.sll_halen = ETH_ALEN;
+    sock_addr.sll_halen = ETH_ALEN;
 
     return res; 
   }
@@ -87,36 +86,60 @@ int socket_init()
    set EtherType
    sendto()                                
 */
-int send_data (const char *data, size_t data_sz, const char *mac_dest)
+int send_data (const char *data, unsigned data_sz, const char *mac_dest)
 {
   int res = 0;
-  if (data && data_sz && mac_dest)      /* here we simply guard ourseleves from 0x0 addresses passed to func */
+  unsigned total_sz = ETH_HLEN;     /* this is total size of frame (header + payload) */
+  EH *frame_hdr  = (EH*)(ether_frame_send); /* just for convenience */
+                                                
+  if (data_sz > ETH_DATA_LEN)            /* if payload is larger then allowed */
   {
-    if ((data_sz < (ETH_ZLEN - ETH_HLEN)) || (data_sz  >  ETH_DATA_LEN) )
-    {
-      fprintf (stderr, "Invalid size of data_frame! Cannot send.\n");
-      res = EINVAL;
-    }
-    else  
-    {
-        struct ethhdr *frame_hdr  = (struct ethhdr *)(ether_frame_send); /* just for convenience */
-        memcpy(frame_hdr->h_dest, mac_dest, ETH_ALEN);         /* put mac dest to header */
-        memcpy(frame_hdr->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
-        frame_hdr->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
-        memcpy (frame_hdr + 1, data, data_sz);   /* copy data into buffer_send. 
+    fprintf (stderr, "Size of data > ETH_DATA_LEN! Cannot send.\n");
+    res = -1;
+  }
+  else
+  {
+    memcpy (frame_hdr->h_dest, mac_dest, ETH_ALEN);         /* put mac dest to header */
+    memcpy (frame_hdr->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
+    frame_hdr->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
+
+    memcpy (frame_hdr + 1, data, data_sz);   /* copy data into buffer_send. 
                                                   we add 1 as frame_hdr is of size ETH_HLEN, thus adding 1
                                                   actually increases address by ETH_HLEN bytes (14) */
+    if (data_sz < ETH_ZLEN)                 /* here we check min octests in frame */
+    {
+      unsigned append_sz = ETH_ZLEN - data_sz;  /* store how many zeros to append to data */
+      const char *append_offset = data + data_sz;     /* store offset, where zeros are appended */
 
-        res = sendto (socket_fd, frame_hdr,  data_sz + ETH_HLEN, 0,   /* no flags specified */
-                     (SA*)&sock_addr, sizeof(SA_LL));
-        if (res == -1)
-          perror("Error: sendto()\t");
+      memset ((void*)append_offset, 0, append_sz);     /* append zeros to data */
+      total_sz += append_sz;                    /* add appended zeros to total frame sz */
     }
+
+    res = sendto (socket_fd, frame_hdr, total_sz, 0,   /* no flags specified */
+                 (SA*)&sock_addr, sizeof(SA_LL));
+    if (res == -1)
+      perror("Error: sendto()\t");
   }
+  memset ((void*)data, 0, data_sz);        /* clear data from frame no matter
+                                            whether it was sent or not */
+  return res;
+}
+
+int discover_server (void)    /* broadcast message with request for game server */
+{
+    int res = 0;
+    const char *const data = "SERVER_DISCOVERY";
+    const char const mac_dest [ETH_ALEN] = {
+                0xff,0xff,0xff,0xff,0xff,0xff   /* use broadcast address */
+                }; 
+    unsigned data_sz = strlen (data);
+    res = send_data (data, data_sz, mac_dest);
+    if (res == -1)
+      perror("Error: discover_server()\t");
     return res;
 }
 
-int receive (char *buf)  /* copy received frame into buffer  */
+int receive (char *buf)                     /* copy received frame into buffer  */
 {  
   int res = -1;
   if (buf == NULL)
@@ -143,12 +166,12 @@ int receive (char *buf)  /* copy received frame into buffer  */
  
 }
 
-void close_socket()
+void socket_close (void)
 {
     close (socket_fd);
 }
 
-const char *str_error() /* return str error human readable */
+const char *str_error (void) /* return str error human readable */
 {
-    return strerror( errno ); 
+    return strerror (errno); 
 }
