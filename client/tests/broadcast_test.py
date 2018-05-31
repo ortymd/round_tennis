@@ -10,28 +10,35 @@
 
 import ctypes
 import time
+import time
 from ctypes import c_char_p
 from ctypes import c_uint
 import threading
-lib_handle = ctypes.cdll.LoadLibrary("../../lib_c/lib_send_receive.so")
 
-data = b'this is a test message'        # build bytes object here
+# Here we load lib in main thread. It appears that
+# each thread created in program should load the lib as well.
+# We did not find out why ctypes is set up to work in such a way.
+# Hopefully we do everything right here and let the source be with us.
+lib_handle = ctypes.cdll.LoadLibrary("../../lib_c/lib_send_receive.so")   
+
+test_data = b'this is a test message'        # build bytes object here
+total_payload_sz = 1<<6
 
 def send_data_test():
-    data_sz=3*len(data)                     # we need to multiply in order to provide the least
-                                            # payload size and hence frame size.
-                                            # if least frame size is not ensured,
-                                            # frame can be ignored by network equipment.
-                                            # However we have not verified this yet.
+    lib_handle = ctypes.cdll.LoadLibrary("../../lib_c/lib_send_receive.so")
+    data = ctypes.create_string_buffer (test_data, total_payload_sz)  # here we allocate memory which is used to store/modify,
+                                                                      # in case length is less than min allowed, payload
+    data_sz = len (test_data)                      # note that len (data) return size of whole payload, that is 
+                                                   # total_payload_sz. This is the reason we call len (test_data) here
+
     TEST = 0
     if TEST == 0:
         send_data = lib_handle.send_data                        # just for convenience
         send_data.argtypes = [c_char_p, c_uint, c_char_p]       # types of args that C function requires
         mac_dest = b'\xff\xff\xff\xff\xff\xff'                  # build bytes object here
-        for i in range (10):
-            print ("Sending\t", i)
+        for i in range (2):
+            print ('Sending\t', i)
             send_data (data, data_sz, mac_dest)
-            time.sleep(1)
     elif TEST == 1:
         send_data_thread = threading.Thread (target = lib_handle.send_data,
                                              args = (data, data_sz, ctypes.c_char_p(mac_dest)))
@@ -40,31 +47,32 @@ def send_data_test():
         send_data_thread = threading.Thread (target = lib_handle.send_data,
                                              args = (data, data_sz, mac_dest))
 
-    print ('send_data thread started.')
-    send_data_thread.start() 
-    print ('send_data thread finished.')
-
 def receive_test():
+    lib_handle = ctypes.cdll.LoadLibrary("../../lib_c/lib_send_receive.so")
     receive = lib_handle.receive
     receive.argtypes = [c_char_p]
-    buf_sz = 1<<6
-    buf = ctypes.create_string_buffer (buf_sz)      # here we allocate memory which is used to store payload
+    buf = ctypes.create_string_buffer (total_payload_sz)      # here we allocate memory which is used to store payload
 
     print ('Receive func started.')
+    time.sleep (1)
     receive (buf) 
-    print ('Received message is (raw bytes):\t', repr(buf.raw));
-
-    if repr(buf.value) != data:
+    print ('\nReceived message is (raw bytes):\n', repr(buf.raw));
+    # import rpdb                     # start debugging here
+    # rpdb.set_trace()
+    if repr(buf.value) != test_data:
         print ('TEST FAILED')
     else:
         print ('TEST SUCCESS')
 
 lib_handle.socket_init()     # initialize global socket for communication
 
-send_data_test_thread = threading.Thread (target = send_data_test, args = ())
-receive_test_thread = threading.Thread (target = receive_test, args = ())
+receive_test_thread = threading.Thread (target = receive_test)
+send_data_test_thread = threading.Thread (target = send_data_test)
 
-send_data_test_thread.start()
-receive_test_thread.start()
+receive_test_thread.start()    # start thread that receives test packets
+send_data_test_thread.start()   # start thread that sends test packets
+
+receive_test_thread.join()
+send_data_test_thread.join()
 
 lib_handle.close_socket()
