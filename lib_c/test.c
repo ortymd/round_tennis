@@ -4,8 +4,13 @@
 #include <string.h>
 #include <lib_send_receive.h>
 
+#define _GNU_SOURCE     /* for syscall() interface */
+#include <unistd.h>
+#include <sys/syscall.h>
+
+
 #define INCLUDE_SEND 1
-#define INCLUDE_RECEIVE 0
+#define INCLUDE_RECEIVE 1
 
 typedef struct 
 {
@@ -22,12 +27,15 @@ void* test_send_data (void *test_payload)
   payload *test_payload_ptr = (payload*)test_payload;
 
   printf("Starting send_data thread.\n"); 
-  res = send_data (test_payload_ptr->data, test_payload_ptr->data_sz,
-                  test_payload_ptr->mac_dest);
-  if (res == -1)
-    perror ("Error: send()\t");
-  else
-    printf ("***Message sent. Sent bytes:\t%d\n", res);
+  for (unsigned i = 0; i < 10; ++i)
+  {
+    res = send_data (test_payload_ptr->data, test_payload_ptr->data_sz,
+                    test_payload_ptr->mac_dest);
+    if (res == -1)
+      perror ("Error: send()\t");
+    else
+      printf ("***Message sent. ID:\t%u Sent bytes:\t%d\n", i, res);
+  }
 #endif
   return test_payload;
 }
@@ -36,15 +44,23 @@ void* test_receive (void* buf)
 {
 #if INCLUDE_RECEIVE == 1
   int res = 0;
+  int num_of_messages = 0;
   printf("Starting receive thread.\n"); 
-  sleep (3);
-  res = receive (buf);
-  if (res == -1)
-    perror ("Error: receive()\t");
-  else
+
+  while (1)
   {
-    printf ("***Message received. Received bytes:\t%d\n", res);
-    printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
+    res = receive (buf);
+
+    if (res == -1)
+      perror ("Error: receive()\t");
+    else
+    {
+      printf ("\n***Message received. Received bytes:\t%d\n", res);
+      printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
+      ++num_of_messages;
+      printf ("\nThread ID:\t%d\nTotal received:\t%d\n",
+              syscall (__NR_gettid), num_of_messages);
+    }
   }
 #endif
   return buf;
@@ -66,7 +82,8 @@ int main()
   memcpy (test_payload.mac_dest, mac_dest, 6);
 
   pthread_t send_data_thread;
-  pthread_t receive_thread;
+  pthread_t receive_thread_1;
+  pthread_t receive_thread_2;
 
   res = socket_init();    /* initialize common socket for both threads */
   if (res == -1)
@@ -76,12 +93,17 @@ int main()
   if (res == -1)
     perror("Error: pthread_create()\t");
 
-  res = pthread_create (&receive_thread, 0, test_receive, (void*)buf);
+  res = pthread_create (&receive_thread_1, 0, test_receive, (void*)buf);
+  if (res == -1)
+    perror("Error: pthread_create()\t");
+
+  res = pthread_create (&receive_thread_2, 0, test_receive, (void*)buf);
   if (res == -1)
     perror("Error: pthread_create()\t");
 
   pthread_join (send_data_thread, NULL);
-  pthread_join (receive_thread, NULL);
+  pthread_join (receive_thread_1, NULL);
+  pthread_join (receive_thread_2, NULL);
 
   exit(0);
 
