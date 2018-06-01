@@ -10,7 +10,6 @@
 
 import ctypes
 import time
-import time
 from ctypes import c_char_p
 from ctypes import c_uint
 import threading
@@ -33,9 +32,9 @@ def send_data_test():
 
     TEST = 0
     if TEST == 0:
-        send_data = lib_handle.send_data                        # just for convenience
-        send_data.argtypes = [c_char_p, c_uint, c_char_p]       # types of args that C function requires
-        mac_dest = b'\xff\xff\xff\xff\xff\xff'                  # build bytes object here
+        send_data = lib_handle.send_data                  # just for convenience
+        send_data.argtypes = [c_char_p, c_uint, c_char_p] # types of args that C function requires
+        mac_dest = bytes([0xff for i in range(6)])        # build bytes object here
         for i in range (2):
             print ('Sending\t', i)
             send_data (data, data_sz, mac_dest)
@@ -75,4 +74,4 @@ send_data_test_thread.start()   # start thread that sends test packets
 receive_test_thread.join()
 send_data_test_thread.join()
 
-lib_handle.close_socket()
+lib_handle.socket_close()
