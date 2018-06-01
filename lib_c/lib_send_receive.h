@@ -36,16 +36,18 @@ typedef struct sockaddr SA;       /* this is general purpose sockaddr used in se
 typedef struct sockaddr_ll SA_LL; /* this is special sockaddr for raw sockets */
 typedef struct ethhdr EH;
 
-int  socket_fd;
-SA_LL sock_addr;
-char ether_frame_send [ETH_FRAME_LEN]; 
-char ether_frame_receive [ETH_FRAME_LEN];
+extern const char *const server_discovery_req;
+extern int socket_fd;
+extern SA_LL sock_addr;
+extern char ether_frame_send [ETH_FRAME_LEN]; 
+extern char ether_frame_receive [ETH_FRAME_LEN];
 extern char *iface_name;
 
 int socket_init();
-int send_data (const char *data, size_t data_sz, const char *mac_dest);
-int receive(char *buf);
-void close_socket();
-const char *str_error();
+int send_data (const char *data, unsigned data_sz, const char *mac_dest);
+int discover_server (void);    /* broadcast message with request for game server */
+int receive (char *buf);
+void socket_close (void);
+const char *str_error (void);
 
 #endif

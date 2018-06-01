@@ -1,10 +1,10 @@
+#define _GNU_SOURCE     /* for syscall() interface */
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <lib_send_receive.h>
 
-#define _GNU_SOURCE     /* for syscall() interface */
 #include <unistd.h>
 #include <sys/syscall.h>
 
@@ -12,7 +12,7 @@
 #define INCLUDE_SEND 1
 #define INCLUDE_RECEIVE 1
 
-typedef struct 
+typedef struct      /* need to put all here in one structure in order to pass to thread */
 {
   char *data;
   unsigned data_sz;
@@ -58,8 +58,8 @@ void* test_receive (void* buf)
       printf ("\n***Message received. Received bytes:\t%d\n", res);
       printf ("Data in message:\n%s\n", (char*)buf + ETH_HLEN);   /* print only payload. no header */
       ++num_of_messages;
-      printf ("\nThread ID:\t%d\nTotal received:\t%d\n",
-              syscall (__NR_gettid), num_of_messages);
+      printf ("\nThread ID:\t%ld\nTotal received:\t%d\n",
+              syscall(__NR_gettid), num_of_messages);
     }
   }
 #endif
@@ -70,16 +70,17 @@ void* test_receive (void* buf)
 int main()
 {
   int res = 0;
+  char *data = "this is a test messsage";
+  unsigned data_sz = strlen (data);
 
-  char buf[50];
+  payload test_payload;                        /* set up payload */
+  test_payload.data = malloc (ETH_DATA_LEN);   /* get part of memory that we can modify (append 0 to payload) */
+  memcpy (test_payload.data, data, data_sz);
+  test_payload.data_sz = data_sz;
+  memset (test_payload.mac_dest, 0xff, ETH_ALEN);
 
-  const int sz = 50;
-  char mac_dest[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  payload test_payload;
-
-  test_payload.data = "this is a test messsage";  /* setup test payload */
-  test_payload.data_sz = sz;
-  memcpy (test_payload.mac_dest, mac_dest, 6);
+  char *buf = malloc (ETH_DATA_LEN);
+  memset (buf, 0, ETH_DATA_LEN);
 
   pthread_t send_data_thread;
   pthread_t receive_thread_1;
@@ -105,6 +106,7 @@ int main()
   pthread_join (receive_thread_1, NULL);
   pthread_join (receive_thread_2, NULL);
 
-  exit(0);
+  socket_close();
 
+  exit(0);
 }
