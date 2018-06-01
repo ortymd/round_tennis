@@ -150,7 +150,7 @@ int receive (char *buf)                     /* copy received frame into buffer  
 
   printf ("Receiving data...\n");
   res = recv (socket_fd, ether_frame_receive, ETH_DATA_LEN, 0); 
-  printf ("Succesfully received:\t%d bytes", res);
+  printf ("Succesfully received:\t%d bytes\n", res);
 
   if (res == -1)
   {
