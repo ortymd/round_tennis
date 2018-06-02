@@ -12,7 +12,9 @@
 
 import threading
 import ctypes as C
-from ctypes import *
+from ctypes import create_string_buffer
+from ctypes import c_char_p
+from ctypes import c_int
 from uuid import getnode as get_mac
 
 discovery_req = 'DISCOVERY'.encode('utf-8') # payload for discovery req
@@ -23,15 +25,17 @@ class GameServer:
         self.active_clients_mac = None  # we do not know any clients until 
                                         # server discovery
 
-        self.lib_handle = cdll.LoadLibrary("../lib_c/lib_send_receive.so")
+        self.lib_handle = ctypes.cdll.LoadLibrary(       # we use this handle          
+                          "../lib_c/lib_send_receive.so" # to call functions from lib
+                          )                              
 
         self.receive = self.lib_handle.receive       # C func
         self.receive.restype = c_int
         self.receive.argtypes = [c_char_p]
 
-        self.send_data = self.lib_handle.send_data   # C func
-        self.send_data.restype = c_int
-        self.send_data.argtypes = [c_char_p, c_int, c_char_p]
+        self.send_payload = self.lib_handle.send_payload   # C func
+        self.send_payload.restype = c_int
+        self.send_payload.argtypes = [c_char_p, c_int, c_char_p]
 
         self.receive_buf_sz = 1500                # same as ETH_DATA_LEN
         self.receive_buf = create_string_buffer ( # here we store all received frames
