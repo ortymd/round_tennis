@@ -44,7 +44,7 @@ extern char ether_frame_receive [ETH_FRAME_LEN];
 extern char *iface_name;
 
 int socket_init();
-int send_data (const char *data, unsigned data_sz, const char *mac_dest);
+int send_payload (const char *payload, unsigned payload_sz, const char *mac_dest);
 int discover_server (void);    /* broadcast message with request for game server */
 int receive (char *buf);
 void socket_close (void);
