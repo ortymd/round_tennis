@@ -79,22 +79,29 @@ int socket_init()
 }
 
 /*
-   data for send must be more ((60 min ether_frame) - (14 head ether_frame)) => 46 byte
-   copy data from data into ether_frame_send
+   payload for send must be more ((60 min ether_frame) - (14 head ether_frame)) => 46 byte
+   copy payload from payload into ether_frame_send
    set mac address destination
    set mac address source
    set EtherType
    sendto()                                
-*/
-int send_data (const char *data, unsigned data_sz, const char *mac_dest)
+
+   |__FRAME_HEADER__|__PAYLOAD__...|
+   <------------------------------->
+                FRAME
+*/ 
+
+int send_payload (const char *payload, unsigned payload_sz, const char *mac_dest)
 {
   int res = 0;
-  unsigned total_sz = ETH_HLEN;     /* this is total size of frame (header + payload) */
+  unsigned frame_sz = ETH_HLEN;     /* store here size of frame */
+  frame_sz += payload_sz;      /* add payload sz */
+
   EH *frame_hdr  = (EH*)(ether_frame_send); /* just for convenience */
                                                 
-  if (data_sz > ETH_DATA_LEN)            /* if payload is larger then allowed */
+  if (payload_sz > ETH_DATA_LEN)            /* if payload is larger then allowed */
   {
-    fprintf (stderr, "Size of data > ETH_DATA_LEN! Cannot send.\n");
+    fprintf (stderr, "Size of payload > ETH_DATA_LEN! Cannot send.\n");
     res = -1;
   }
   else
@@ -103,40 +110,26 @@ int send_data (const char *data, unsigned data_sz, const char *mac_dest)
     memcpy (frame_hdr->h_source, sock_addr.sll_addr, ETH_ALEN);    /* set my mac address  */
     frame_hdr->h_proto =  ETHER_TYPE_PACKET;               /* set type protocol */
 
-    memcpy (frame_hdr + 1, data, data_sz);   /* copy data into buffer_send. 
+    memcpy (frame_hdr + 1, payload, payload_sz);   /* copy payload into buffer_send. 
                                                   we add 1 as frame_hdr is of size ETH_HLEN, thus adding 1
                                                   actually increases address by ETH_HLEN bytes (14) */
-    if (data_sz < ETH_ZLEN)                 /* here we check min octests in frame */
+    if (payload_sz < ETH_ZLEN)                 /* here we check min octests in frame */
     {
-      unsigned append_sz = ETH_ZLEN - data_sz;  /* store how many zeros to append to data */
-      const char *append_offset = data + data_sz;     /* store offset, where zeros are appended */
+      unsigned append_sz = ETH_ZLEN - payload_sz;  /* store how many zeros to append to payload */
+      const char *append_offset = payload + payload_sz; /* store offset, where zeros are appended */
 
-      memset ((void*)append_offset, 0, append_sz);     /* append zeros to data */
-      total_sz += append_sz;                    /* add appended zeros to total frame sz */
+      memset ((void*)append_offset, 0, append_sz);     /* append zeros to payload */
+      frame_sz += append_sz;                    /* add appended zeros to total frame sz */
     }
 
-    res = sendto (socket_fd, frame_hdr, total_sz, 0,   /* no flags specified */
+    res = sendto (socket_fd, frame_hdr, frame_sz, 0,   /* no flags specified */
                  (SA*)&sock_addr, sizeof(SA_LL));
     if (res == -1)
       perror("Error: sendto()\t");
   }
-  memset ((void*)data, 0, data_sz);        /* clear data from frame no matter
+  memset ((void*)payload, 0, payload_sz);        /* clear payload from frame no matter
                                             whether it was sent or not */
   return res;
-}
-
-int discover_server (void)    /* broadcast message with request for game server */
-{
-    int res = 0;
-    const char *const data = "SERVER_DISCOVERY";
-    const char const mac_dest [ETH_ALEN] = {
-                0xff,0xff,0xff,0xff,0xff,0xff   /* use broadcast address */
-                }; 
-    unsigned data_sz = strlen (data);
-    res = send_data (data, data_sz, mac_dest);
-    if (res == -1)
-      perror("Error: discover_server()\t");
-    return res;
 }
 
 int receive (char *buf)                     /* copy received frame into buffer  */
