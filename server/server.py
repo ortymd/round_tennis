@@ -11,21 +11,24 @@
 # lib_send_receive
 
 import threading
-import ctypes as C
-from ctypes import create_string_buffer
-from ctypes import c_char_p
-from ctypes import c_int
 from uuid import getnode as get_mac
 
-discovery_req = 'DISCOVERY'.encode('utf-8') # payload for discovery req
+from connection_requests import *
+from ctypes_defs import *           # import all ctypes related definitions
 
 class GameServer:
     def __init__(self):
-        self.mac = get_mac()  #   get mac address as 48 bit int
-        self.active_clients_mac = None  # we do not know any clients until 
-                                        # server discovery
+        self.mac = hex(get_mac()).encode('utf8')  # store source mac address as 6 raw bytes
+        self.mac_broadcast = bytes([0xff for i in range(6)]) # store broadcast addr as 6 raw bytes
 
-        self.lib_handle = ctypes.cdll.LoadLibrary(       # we use this handle          
+        self.active_clients_num = 0
+        self.active_clients_max = 4     # We need this to allocate enough memory in python to
+                                        # store mac addresses of all clients.
+                                        # Allocate memory to store mac addresses.
+        self.active_clients_mac = C.create_string_buffer(
+                                  self.active_clients_max)
+
+        self.lib_handle = C.cdll.LoadLibrary(       # we use this handle
                           "../lib_c/lib_send_receive.so" # to call functions from lib
                           )                              
 
@@ -46,34 +49,36 @@ class GameServer:
     def run(self):
         print ('Server started. Waiting for connections...');
 
-        print('Receive buf value:\t', self.receive_buf.value)
-        #print('Receive buf raw:\t', self.receive_buf.raw)
         while True:# start server main loop
-            print('\nReceive() start')
+            print('\n**********\nReceive() start')
             self.receive (self.receive_buf)
             print('Receive() ended\n')
 
             self.parse_receive_buf()
 
-
     def parse_receive_buf(self):
-        print('Started parse...\n')
+        print('Started parse_receive_buf()...\n')
         print('Receive buf value:\t', self.receive_buf.value)
         #print('Receive buf raw:\t', self.receive_buf.raw)
 
-        self.parse_mac_dest()   # here we get source mac address
+        self.parse_frame_header()   # here we get source mac address
+        self.parse_frame_payload()   # here we get source mac address
         return
 
-    def parse_mac_dest(self):
+    def parse_frame_header(self):
         # convert to byte value
         print('Receive buf value[0:6]:\t', self.receive_buf.value[0:6])
-        print('Receive buf raw[0:6]:\t', self.receive_buf.raw[0:6])
         print('Receive buf value[6:12]:\t', self.receive_buf.value[6:12])
+
+        print('Receive buf raw[0:6]:\t', self.receive_buf.raw[0:6])
         print('Receive buf raw[6:12]:\t', self.receive_buf.raw[6:12])
-        print('Receive buf payload_raw[14:]:\t', self.receive_buf.raw[14:])
-        print('Receive buf payload_value[14:]:\t', self.receive_buf.value[14:])
-        print('Receive buf payload_value[14:]:\t', self.receive_buf.value)
-        print('Receive buf payload_value[14:]:\t', type(self.receive_buf.raw))
+
+        print('Receive buf payload_value[14:20]:\t', self.receive_buf.value[14:20])
+        print('Receive buf payload_raw[14:23]:\t', self.receive_buf.raw[14:23])
+        print('Receive buf payload_raw[14:23]:\t', self.receive_buf.raw[14:23].decode('utf8'))
+
+        mac_src = self.receive_buf.raw[6:12]
+
         return
 
     def __del__(self):
