@@ -1,7 +1,5 @@
-import ctypes
-from ctypes import create_string_buffer
-from ctypes import c_char_p
-from ctypes import c_int
+import sys
+sys.path.append('../server/')
 
 import pygame
 from pygame.locals import *
@@ -10,20 +8,22 @@ import threading
 
 from uuid import getnode as get_mac # to be able to get mac of this host
 
+from connection_requests import *
+from functions import *
+from ctypes_defs import *           # import all ctypes related definitions
+import pdb
 
 class GameClient():
     def __init__(self):
                          # first we start pygame initialization
         #pygame.init()    #  here we start all of the pygame stuff
-        width, height = 400, 500  # set screen dimensions
-        self.scree = pygame.display.set_mode((width, height))
 
-        self.mac = hex(get_mac()).encode('utf8')  # store source mac address as 6 raw bytes
         self.mac_broadcast = bytes([0xff for i in range(6)]) # store broadcast addr as 6 raw bytes
+        self.mac = bytes([0x44,0x8a,0x5b,0x90,0xa4,0xe0])
         self.mac_server = None              # here we store server mac address
                                             # we do not know this value until server discovery
 
-        self.lib_handle = ctypes.cdll.LoadLibrary(       # we use this handle          
+        self.lib_handle = C.cdll.LoadLibrary(       # we use this handle
                           "../lib_c/lib_send_receive.so" # to call functions from lib
                           )                              
                                                      
@@ -41,18 +41,24 @@ class GameClient():
 
         self.payload_sz = 1500     # ETH_DATA_LEN 
         self.payload = create_string_buffer ( # here we write payload to be sent 
-                           self.payload_sz) 
+                           self.payload_sz)
                       
         self.lib_handle.socket_init() # initialize global socket for both receive/send
+
+        width, height = 400, 500  # set screen dimensions
+        self.screene = pygame.display.set_mode((width, height))
 
     def __del__ (self):
         self.lib_handle.socket_close()
 
     def send_discover_server (self):
-        self.payload.value = 'DISCOVERY'.encode('utf8')
-        for i in range(5):      # send 5 discovery requests
-            print ('Client sending discovery:\nmac:\t', self.mac)
-            self.send_payload (self.payload, self.payload_sz, self.mac_broadcast) 
+        num_of_requests = 3
+
+        for i in range(num_of_requests):      # send num_of_requests discovery requests
+            C.memmove (self.payload, discover_server, len(discover_server))
+            print ('Client sending discovery:\nmac_dest:\t', self.mac)
+            print ('Payload is :\t', self.payload)
+            self.send_payload (self.payload, self.payload_sz, C.cast(self.mac, c_char_p))
 
     def read_keyboard(self):
         running = True
@@ -66,7 +72,7 @@ class GameClient():
                 print('keydown')
                 if event.key == K_h: # if user presses 'h'
                     payload_str = 'hello'
-                    payload = payload_str.encode('utf-8')
+                    payload = payload_str.encode('utf8')
                     payload_sz = len(payload_str)
                     print('payload:\t', payload)
                     print('payload_sz:\t', payload_sz)
